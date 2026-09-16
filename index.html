@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Counter">
+<meta name="theme-color" content="#0b0b0f">
+<title>Counter</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon.png">
+<style>
+  :root {
+    --bg: #0b0b0f;
+    --surface: #17171d;
+    --accent: #ff5a3c;
+    --accent-dim: #7a2c1d;
+    --text: #f5f5f7;
+    --text-dim: #8a8a93;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0;
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+  body {
+    display: flex;
+    flex-direction: column;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    height: 100vh;
+    user-select: none;
+  }
+  .header {
+    text-align: center;
+    padding: 12px 16px 0;
+    color: var(--text-dim);
+    font-size: 13px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-weight: 600;
+  }
+  .count-wrap {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .count {
+    font-size: clamp(64px, 22vw, 128px);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+    transition: transform 0.08s ease;
+  }
+  .count.bump { transform: scale(1.06); }
+  .step-label {
+    color: var(--text-dim);
+    font-size: 14px;
+  }
+  .controls {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    padding: 16px;
+    padding-bottom: max(16px, env(safe-area-inset-bottom));
+  }
+  button {
+    border: none;
+    border-radius: 20px;
+    font-size: 22px;
+    font-weight: 600;
+    padding: 26px 0;
+    color: var(--text);
+    background: var(--surface);
+    transition: transform 0.05s ease, background 0.15s ease;
+  }
+  button:active {
+    transform: scale(0.96);
+    background: #22222b;
+  }
+  .btn-inc {
+    background: var(--accent);
+    color: #1a0a05;
+    grid-column: span 2;
+    font-size: 32px;
+    padding: 30px 0;
+  }
+  .btn-inc:active { background: #e64d30; }
+  .row-secondary {
+    display: contents;
+  }
+  .btn-step {
+    background: var(--surface);
+    font-size: 16px;
+    padding: 16px 0;
+  }
+  .step-row {
+    display: flex;
+    gap: 10px;
+    padding: 0 16px;
+  }
+  .step-row button {
+    flex: 1;
+    padding: 12px 0;
+    font-size: 15px;
+    background: var(--surface);
+    color: var(--text-dim);
+  }
+  .step-row button.active {
+    background: var(--accent-dim);
+    color: var(--text);
+  }
+</style>
+</head>
+<body>
+  <div class="header">Counter</div>
+  <div class="count-wrap">
+    <div class="count" id="count">0</div>
+    <div class="step-label" id="stepLabel">step 1</div>
+  </div>
+  <div class="step-row" id="stepRow">
+    <button data-step="1" class="active">+1</button>
+    <button data-step="5">+5</button>
+    <button data-step="10">+10</button>
+  </div>
+  <div class="controls">
+    <button class="btn-inc" id="incBtn">+</button>
+    <button id="decBtn">−</button>
+    <button id="resetBtn">Reset</button>
+  </div>
+
+<script>
+  const countEl = document.getElementById('count');
+  const incBtn = document.getElementById('incBtn');
+  const decBtn = document.getElementById('decBtn');
+  const resetBtn = document.getElementById('resetBtn');
+  const stepRow = document.getElementById('stepRow');
+  const stepLabel = document.getElementById('stepLabel');
+
+  let count = parseInt(localStorage.getItem('counter_value') || '0', 10);
+  let step = parseInt(localStorage.getItem('counter_step') || '1', 10);
+
+  function render() {
+    countEl.textContent = count;
+    stepLabel.textContent = 'step ' + step;
+    localStorage.setItem('counter_value', String(count));
+  }
+
+  function bump() {
+    countEl.classList.remove('bump');
+    void countEl.offsetWidth;
+    countEl.classList.add('bump');
+  }
+
+  function haptic() {
+    if (navigator.vibrate) navigator.vibrate(10);
+  }
+
+  incBtn.addEventListener('click', () => {
+    count += step;
+    render();
+    bump();
+    haptic();
+  });
+
+  decBtn.addEventListener('click', () => {
+    count -= step;
+    render();
+    bump();
+    haptic();
+  });
+
+  resetBtn.addEventListener('click', () => {
+    count = 0;
+    render();
+    bump();
+    haptic();
+  });
+
+  stepRow.addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-step]');
+    if (!btn) return;
+    step = parseInt(btn.dataset.step, 10);
+    localStorage.setItem('counter_step', String(step));
+    [...stepRow.children].forEach(b => b.classList.toggle('active', b === btn));
+    render();
+  });
+
+  render();
+
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js').catch(() => {});
+    });
+  }
+</script>
+</body>
+</html>
