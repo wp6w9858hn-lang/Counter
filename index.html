@@ -65,6 +65,33 @@
     color: var(--text-dim);
     font-size: 14px;
   }
+  .sign {
+    margin-top: 4px;
+    padding: 10px 18px;
+    border-radius: 14px;
+    font-size: 15px;
+    font-weight: 700;
+    text-align: center;
+    max-width: 260px;
+    opacity: 0;
+    transform: translateY(-6px) scale(0.96);
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    pointer-events: none;
+  }
+  .sign.visible {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  .sign.push {
+    background: var(--accent-dim);
+    color: var(--text);
+  }
+  .sign.success {
+    background: #1f3d2b;
+    color: #6ee89a;
+    letter-spacing: 0.04em;
+    font-size: 18px;
+  }
   .controls {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -125,6 +152,7 @@
   <div class="count-wrap">
     <div class="count" id="count">0</div>
     <div class="step-label" id="stepLabel">step 1</div>
+    <div class="sign" id="sign" aria-live="polite"></div>
   </div>
   <div class="step-row" id="stepRow">
     <button data-step="1" class="active">+1</button>
@@ -144,14 +172,81 @@
   const resetBtn = document.getElementById('resetBtn');
   const stepRow = document.getElementById('stepRow');
   const stepLabel = document.getElementById('stepLabel');
+  const signEl = document.getElementById('sign');
 
   let count = parseInt(localStorage.getItem('counter_value') || '0', 10);
   let step = parseInt(localStorage.getItem('counter_step') || '1', 10);
+  let sound35Played = false;
+
+  function playBaDumTss() {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
+    const now = ctx.currentTime;
+
+    function drum(time, freq, dur) {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, time);
+      osc.frequency.exponentialRampToValueAtTime(freq * 0.5, time + dur);
+      gain.gain.setValueAtTime(0.9, time);
+      gain.gain.exponentialRampToValueAtTime(0.001, time + dur);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(time);
+      osc.stop(time + dur);
+    }
+
+    function cymbal(time, dur) {
+      const bufferSize = Math.floor(ctx.sampleRate * dur);
+      const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) {
+        data[i] = (Math.random() * 2 - 1) * (1 - i / bufferSize);
+      }
+      const noise = ctx.createBufferSource();
+      noise.buffer = buffer;
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'highpass';
+      filter.frequency.value = 6000;
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.5, time);
+      gain.gain.exponentialRampToValueAtTime(0.001, time + dur);
+      noise.connect(filter).connect(gain).connect(ctx.destination);
+      noise.start(time);
+      noise.stop(time + dur);
+    }
+
+    drum(now, 150, 0.15);
+    drum(now + 0.22, 150, 0.15);
+    cymbal(now + 0.44, 0.6);
+  }
+
+  function updateSign() {
+    if (count >= 35) {
+      signEl.textContent = 'GREAT JOB';
+      signEl.classList.add('visible', 'success');
+      signEl.classList.remove('push');
+      if (!sound35Played) {
+        playBaDumTss();
+        sound35Played = true;
+      }
+    } else if (count >= 30) {
+      signEl.textContent = 'Done for the day? 5 more please!';
+      signEl.classList.add('visible', 'push');
+      signEl.classList.remove('success');
+      sound35Played = false;
+    } else {
+      signEl.classList.remove('visible', 'push', 'success');
+      sound35Played = false;
+    }
+  }
 
   function render() {
     countEl.textContent = count;
     stepLabel.textContent = 'step ' + step;
     localStorage.setItem('counter_value', String(count));
+    updateSign();
   }
 
   function bump() {
