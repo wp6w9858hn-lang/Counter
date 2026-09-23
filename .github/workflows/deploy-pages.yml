@@ -2,7 +2,7 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: [main]
+    branches: [claude/iphone-counter-app-f8u93d]
   workflow_dispatch:
 
 permissions:
